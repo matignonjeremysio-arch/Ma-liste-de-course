@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ma Super Liste de Courses Pro</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.43.4/supabase.js"></script>
     <style>
         /* Variables de couleurs : Mode Clair par défaut */
         :root {
@@ -18,7 +18,7 @@
             --input-bg: #ffffff;
         }
         
-        /* Mode Sombre Automatique (détecte les réglages de l'iPhone) */
+        /* Mode Sombre Automatique */
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-color: #121212;
@@ -266,4 +266,189 @@
 
     <script>
         const SUPABASE_URL = "https://qifetgvwxhdzvikmypca.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpZmV0Z3Z3eGgkemZpa215cGNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5OTYwNDMsImV4cCI6MjA4NjU3MjA0M30.F_B49X69R0hUjA-BskT_XJscZ9_y-M9W_f5C
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpZmV0Z3Z3eGgkemZpa215cGNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5OTYwNDMsImV4cCI6MjA4NjU3MjA0M30.F_B49X69R0hUjA-BskT_XJscZ9_y-M9W_f5CjE604bQ"; 
+        
+        let supabaseClient;
+        const conteneurAPrendre = document.getElementById('liste-a-prendre');
+        const conteneurCoches = document.getElementById('liste-coches');
+        let listeData = {};
+
+        // On attend que la page et les scripts soient totalement chargés avant de démarrer
+        window.addEventListener('load', () => {
+            if (typeof supabase !== 'undefined') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                initialiserDonnees();
+            } else {
+                console.error("Impossible de charger la bibliothèque Supabase. Vérifiez votre connexion.");
+                alert("Erreur : La connexion à la base de données a été bloquée.");
+            }
+        });
+
+        async function initialiserDonnees() {
+            try {
+                const { data, error } = await supabaseClient.from('liste_courses').select('*');
+                if (error) throw error;
+
+                if (data) {
+                    data.forEach(item => {
+                        listeData[item.id] = item;
+                    });
+                }
+
+                rafraichirAffichageDOM();
+
+                supabaseClient
+                    .channel('schema-db-changes')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'liste_courses' }, payload => {
+                        if (payload.eventType === 'DELETE') {
+                            delete listeData[payload.old.id];
+                        } else {
+                            listeData[payload.new.id] = payload.new;
+                        }
+                        rafraichirAffichageDOM();
+                    })
+                    .subscribe();
+
+            } catch (err) {
+                console.error("Erreur de connexion :", err.message);
+            }
+        }
+
+        function rafraichirAffichageDOM() {
+            conteneurAPrendre.innerHTML = "";
+            conteneurCoches.innerHTML = '<div class="rayon-titre">✅ Articles déjà pris</div>';
+            
+            Object.values(listeData).forEach(item => {
+                const element = genererDOMArticle(item);
+                deplacerVisuellement(item, element);
+            });
+        }
+
+        async function sauvegarderItemBdd(item) {
+            await supabaseClient.from('liste_courses').upsert(item);
+        }
+
+        function genererDOMArticle(item) {
+            const divItem = document.createElement('div');
+            divItem.className = 'produit-item';
+            divItem.id = `item-${item.id}`;
+
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = item.checked;
+            checkbox.addEventListener('change', async () => {
+                item.checked = checkbox.checked;
+                await sauvegarderItemBdd(item);
+            });
+
+            const span = document.createElement('span');
+            span.className = 'produit-texte';
+            span.innerHTML = `${item.nom} <span class="badge-qte" id="badge-${item.id}" style="font-weight:bold; color:var(--accent-color);">${item.qte > 1 ? '(x' + item.qte + ')' : ''}</span>`;
+
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            divItem.appendChild(label);
+
+            const divQte = document.createElement('div');
+            divQte.className = 'quantite-control';
+
+            const btnMoins = document.createElement('button');
+            btnMoins.className = 'quantite-btn';
+            btnMoins.textContent = '-';
+            btnMoins.addEventListener('click', async () => {
+                if (item.qte > 1) {
+                    item.qte--;
+                    await sauvegarderItemBdd(item);
+                } else if (!item.permanent) {
+                    await supabaseClient.from('liste_courses').delete().eq('id', item.id);
+                }
+            });
+
+            const valQte = document.createElement('span');
+            valQte.className = 'quantite-valeur';
+            valQte.id = `qte-${item.id}`;
+            valQte.textContent = item.qte;
+
+            const btnPlus = document.createElement('button');
+            btnPlus.className = 'quantite-btn';
+            btnPlus.textContent = '+';
+            btnPlus.addEventListener('click', async () => {
+                item.qte++;
+                await sauvegarderItemBdd(item);
+            });
+
+            divQte.appendChild(btnMoins);
+            divQte.appendChild(valQte);
+            divQte.appendChild(btnPlus);
+            divItem.appendChild(divQte);
+
+            return divItem;
+        }
+
+        function deplacerVisuellement(item, elementHTML) {
+            if (item.checked) {
+                conteneurCoches.appendChild(elementHTML);
+            } else {
+                const idRayon = `rayon-${item.rayon.replace(/\s/g, '-')}`;
+                let divRayon = document.getElementById(idRayon);
+                
+                if (!divRayon) {
+                    divRayon = document.createElement('div');
+                    divRayon.className = 'rayon';
+                    divRayon.id = idRayon;
+                    divRayon.innerHTML = `<div class="rayon-titre">${item.rayon}</div>`;
+                    conteneurAPrendre.appendChild(divRayon);
+                }
+                divRayon.appendChild(elementHTML);
+            }
+            nettoyerRayonsVides();
+        }
+
+        function nettoyerRayonsVides() {
+            document.querySelectorAll('.rayon').forEach(r => {
+                if (r.children.length <= 1) r.remove();
+            });
+        }
+
+        async function ajouterArticleManuel() {
+            const input = document.getElementById('nouvel-article');
+            const nom = input.value.trim();
+            if (!nom) return;
+
+            const idUnique = 'custom-' + Date.now();
+            const nouvelItem = {
+                id: idUnique,
+                nom: nom,
+                rayon: "✨ Divers / Imprévus",
+                checked: false,
+                qte: 1,
+                permanent: false
+            };
+
+            await sauvegarderItemBdd(nouvelItem);
+            input.value = '';
+        }
+
+        document.getElementById('nouvel-article').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') ajouterArticleManuel();
+        });
+
+        async function toutEffacer() {
+            if (confirm("Réinitialiser la liste pour vos prochaines courses ?")) {
+                for (const id of Object.keys(listeData)) {
+                    if (listeData[id].permanent) {
+                        listeData[id].checked = false;
+                        listeData[id].qte = 1;
+                        await sauvegarderItemBdd(listeData[id]);
+                    } else {
+                        await supabaseClient.from('liste_courses').delete().eq('id', id);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
