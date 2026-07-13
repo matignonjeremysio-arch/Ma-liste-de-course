@@ -5,15 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ma Liste</title>
     <style>
-        :root { --bg-color: #f4f6f9; --card-bg: #ffffff; --text-color: #2c3e50; --accent-color: #3498db; --border-color: #e2e8f0; }
-        body { font-family: sans-serif; background-color: var(--bg-color); padding: 15px; padding-bottom: 80px; }
-        .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .header-rayon { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
-        .rayon-titre { font-weight: bold; color: var(--accent-color); }
-        .btn-plus { background: #2ecc71; color: white; border: none; width: 26px; height: 26px; border-radius: 50%; font-size: 18px; }
-        .produit { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .checked-text { text-decoration: line-through; color: #95a5a6; }
-        .btn-reset { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; border: none; padding: 12px 20px; border-radius: 20px; }
+        :root { --bg-color: #f4f6f9; --main-color: #3498db; --done-color: #bdc3c7; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); padding: 15px; margin: 0; padding-bottom: 80px; }
+        
+        /* Bloc des articles à acheter */
+        .rayon { background: white; border-left: 5px solid var(--main-color); border-radius: 8px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        /* Bloc des articles déjà pris */
+        .rayon-done { background: #fdfdfd; border-left: 5px solid var(--done-color); border-radius: 8px; padding: 12px; margin-bottom: 10px; opacity: 0.8; }
+        
+        .header-rayon { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .rayon-titre { font-weight: bold; color: #2c3e50; font-size: 1.1em; }
+        .btn-plus { background: #2ecc71; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 18px; }
+        .produit { display: flex; align-items: center; padding: 8px 0; border-top: 1px solid #eee; }
+        .checked-text { text-decoration: line-through; color: #7f8c8d; }
+        .btn-reset { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -38,7 +44,7 @@
                     div.className = 'rayon';
                     div.innerHTML = `<div class="header-rayon"><div class="rayon-titre">${cat}</div><button class="btn-plus" onclick="add('${cat}')">+</button></div>`;
                     items.forEach(i => {
-                        div.innerHTML += `<div class="produit"><label><input type="checkbox" onchange="toggle('${i.id}')"> ${i.nom}</label></div>`;
+                        div.innerHTML += `<div class="produit"><input type="checkbox" onchange="toggle('${i.id}')" style="margin-right:10px; transform: scale(1.5);"> ${i.nom}</div>`;
                     });
                     app.appendChild(div);
                 }
@@ -46,13 +52,13 @@
 
             // DÉJÀ PRIS
             const divCoches = document.createElement('div');
-            divCoches.innerHTML = "<h3>✅ Déjà pris</h3>";
+            divCoches.innerHTML = "<h3 style='color:#7f8c8d; margin-top:30px;'>✅ Déjà pris</h3>";
             categories.forEach(cat => {
                 const items = Object.values(data).filter(i => i.cat === cat && i.done);
                 if (items.length > 0) {
-                    divCoches.innerHTML += `<div class="rayon"><div class="rayon-titre" style="color:gray">${cat}</div>`;
+                    divCoches.innerHTML += `<div class="rayon-done"><div class="rayon-titre" style="color:#7f8c8d">${cat}</div>`;
                     items.forEach(i => {
-                        divCoches.innerHTML += `<div class="produit"><label><input type="checkbox" checked onchange="toggle('${i.id}')"> <span class="checked-text">${i.nom}</span></label></div>`;
+                        divCoches.innerHTML += `<div class="produit"><input type="checkbox" checked onchange="toggle('${i.id}')" style="margin-right:10px; transform: scale(1.5);"> <span class="checked-text">${i.nom}</span></div>`;
                     });
                     divCoches.innerHTML += `</div>`;
                 }
