@@ -2,36 +2,75 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Ma Liste</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ma Super Liste de Courses Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <style>
+        :root { --bg-color: #121212; --card-bg: #1e1e1e; --text-color: #e0e0e0; --accent-color: #2980b9; --border-color: #333333; }
+        body { font-family: sans-serif; background-color: var(--bg-color); color: var(--text-color); padding: 15px; }
+        h1 { text-align: center; }
+        .ajout-container { display: flex; gap: 10px; margin-bottom: 20px; background: var(--card-bg); padding: 10px; border-radius: 12px; }
+        input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #2a2a2a; color: white; }
+        .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .rayon-titre { color: var(--accent-color); font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        .produit-item { display: flex; justify-content: space-between; padding: 8px 0; }
+        .quantite-btn { background: #444; border: none; color: white; width: 30px; border-radius: 5px; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <h1>🛒 Ma Liste</h1>
-    <div id="liste">Connexion en cours...</div>
+
+    <h1>🛒 Ma Liste Pro</h1>
+    <div class="ajout-container">
+        <input type="text" id="nouvel-article" placeholder="Ajouter un article...">
+        <button onclick="ajouter()">+</button>
+    </div>
+
+    <div id="liste-container">Chargement des données...</div>
 
     <script>
         const SUPABASE_URL = "https://qifetgvwxhdzvikmypca.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpZmV0Z3Z3eGgkemZpa215cGNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5OTYwNDMsImV4cCI6MjA4NjU3MjA0M30.F_B49X69R0hUjA-BskT_XJscZ9_y-M9W_f5CjE604bQ";
 
-        // On vérifie immédiatement si supabase est chargé
         if (typeof supabase === 'undefined') {
-            document.getElementById('liste').innerText = "Erreur : La bibliothèque Supabase n'est pas chargée. Vérifie ta connexion internet ou ton bloqueur de publicités.";
+            document.getElementById('liste-container').innerText = "Erreur : Supabase non chargé.";
         } else {
-            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
-            async function charger() {
-                try {
-                    const { data, error } = await supabaseClient.from('liste_courses').select('*');
-                    if (error) {
-                        document.getElementById('liste').innerText = "Erreur BDD : " + error.message;
-                    } else {
-                        document.getElementById('liste').innerText = "Succès ! Articles trouvés : " + (data ? data.length : 0);
-                    }
-                } catch (e) {
-                    document.getElementById('liste').innerText = "Erreur de connexion : " + e.message;
+            async function chargerDonnees() {
+                const { data, error } = await client.from('liste_courses').select('*');
+                if (error) {
+                    document.getElementById('liste-container').innerText = "Erreur BDD: " + error.message;
+                    return;
+                }
+                
+                // Regroupement par rayon
+                const conteneur = document.getElementById('liste-container');
+                conteneur.innerHTML = "";
+                const groupes = {};
+                data.forEach(item => {
+                    if (!groupes[item.rayon]) groupes[item.rayon] = [];
+                    groupes[item.rayon].push(item);
+                });
+
+                for (const rayon in groupes) {
+                    const divRayon = document.createElement('div');
+                    divRayon.className = 'rayon';
+                    divRayon.innerHTML = `<div class="rayon-titre">${rayon}</div>`;
+                    groupes[rayon].forEach(item => {
+                        divRayon.innerHTML += `
+                            <div class="produit-item">
+                                <span>${item.nom}</span>
+                                <div>
+                                    <button class="quantite-btn">-</button>
+                                    <span>${item.qte}</span>
+                                    <button class="quantite-btn">+</button>
+                                </div>
+                            </div>`;
+                    });
+                    conteneur.appendChild(divRayon);
                 }
             }
-            charger();
+            chargerDonnees();
         }
     </script>
 </body>
