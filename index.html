@@ -5,53 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ma Liste</title>
     <style>
-        /* Couleurs automatiques selon le mode sombre/clair */
-        :root {
-            --bg-color: #f4f4f9;
-            --text-color: #333;
-            --card-bg: #fff;
+        /* On force le blanc et le noir pour que ça reste lisible partout */
+        body { 
+            background-color: white !important; 
+            color: black !important; 
+            font-family: sans-serif; 
+            padding: 20px; 
         }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #121212;
-                --text-color: #eee;
-                --card-bg: #1e1e1e;
-            }
+        .rayon { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ccc;
         }
-        body { font-family: sans-serif; background-color: var(--bg-color); color: var(--text-color); padding: 15px; }
-        .rayon { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #444; }
-        .btn-reset { width: 100%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 10px; margin-top: 20px; }
-        input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; }
+        h3 { color: black; }
+        .btn-reset { 
+            width: 100%; 
+            padding: 15px; 
+            background: red; 
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+        }
     </style>
 </head>
 <body>
 
-    <h1>🛒 Ma Liste</h1>
+    <h1 style="color: black;">🛒 Ma Liste</h1>
     <div id="app"></div>
-    <button class="btn-reset" onclick="localStorage.clear(); location.reload();">🔄 Tout Supprimer (Réparer l'affichage)</button>
+    <button class="btn-reset" onclick="localStorage.clear(); location.reload();">REINITIALISER</button>
 
     <script>
-        const categories = ["🍉 Fruits & Légumes", "🥩 Frais & Viande", "❄️ Surgelés", "🥐 Épicerie", "🍾 Boissons", "🧼 Hygiène"];
+        const categories = ["Fruits & Légumes", "Frais & Viande", "Surgelés", "Épicerie", "Boissons", "Hygiène"];
         let data = JSON.parse(localStorage.getItem('liste')) || {};
 
         function render() {
             const app = document.getElementById('app');
             app.innerHTML = "";
-            
             categories.forEach(cat => {
-                const items = Object.values(data).filter(i => i.cat === cat);
-                if (items.length > 0) {
-                    const div = document.createElement('div');
-                    div.className = 'rayon';
-                    div.innerHTML = `<h3>${cat}</h3>`;
-                    items.forEach(i => {
-                        div.innerHTML += `<div><input type="checkbox" ${i.done ? 'checked' : ''} onchange="toggle('${i.id}')"> ${i.nom}</div>`;
-                    });
-                    app.appendChild(div);
-                }
+                const div = document.createElement('div');
+                div.className = 'rayon';
+                div.innerHTML = `<h3>${cat}</h3>`;
+                app.appendChild(div);
             });
         }
-        function toggle(id) { data[id].done = !data[id].done; localStorage.setItem('liste', JSON.stringify(data)); render(); }
         render();
     </script>
 </body>
