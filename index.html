@@ -11,11 +11,10 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; padding-bottom: 100px; }
         h1 { text-align: center; font-size: 22px; margin-bottom: 15px; }
-        .ajout-container { display: flex; gap: 10px; margin-bottom: 20px; background: var(--card-bg); padding: 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .ajout-container input { flex: 1; border: 2px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); padding: 10px; border-radius: 8px; outline: none; }
-        .ajout-container button { background-color: #2ecc71; color: white; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .rayon-titre { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
+        .header-rayon { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
+        .rayon-titre { font-size: 16px; font-weight: bold; color: var(--accent-color); }
+        .btn-plus-rayon { background: #2ecc71; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-weight: bold; }
         .produit-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
         .checkbox-label { display: flex; align-items: center; flex: 1; cursor: pointer; }
         input[type="checkbox"] { width: 22px; height: 22px; border: 2px solid var(--checked-color); border-radius: 6px; margin-right: 12px; cursor: pointer; appearance: none; background-color: var(--input-bg); }
@@ -29,20 +28,16 @@
 <body>
 
     <h1>🛒 Ma Liste Pro</h1>
-    <div class="ajout-container">
-        <input type="text" id="nouvel-article" placeholder="Ajouter un article...">
-        <button onclick="ajouterArticleManuel()">+</button>
-    </div>
-
     <div id="liste-a-prendre"></div>
     <div id="liste-coches">
-        <div class="rayon-titre">✅ Articles déjà pris</div>
+        <div class="header-rayon"><div class="rayon-titre">✅ Articles déjà pris</div></div>
     </div>
 
-    <button class="btn-reset" onclick="toutEffacer()">🔄 Tout Décocher</button>
+    <button class="btn-reset" onclick="toutEffacer()">🔄 Réinitialiser la liste</button>
 
     <script>
-        const produitsParRayon = {
+        const configRayons = ["🍉 Fruits & Légumes", "🥩 Frais & Viande", "🥐 Épicerie", "🍾 Boissons", "🧼 Hygiène & Maison", "✨ Divers"];
+        const baseProduits = {
             "🍉 Fruits & Légumes": ["Raisin", "Tomate", "Melon", "Courgettes", "Brocoli", "Patates", "Pastèque"],
             "🥩 Frais & Viande": ["Jambon", "Fromage", "Yaourt", "Knacki", "Saucisson", "Saumon", "Poisson", "Oeufs", "Chorizo"],
             "🥐 Épicerie": ["Petit déj (Céréales)", "Chips", "Lentilles", "Sucre", "Sel", "Huile", "Pain"],
@@ -52,71 +47,73 @@
 
         let listeData = JSON.parse(localStorage.getItem('liste_courses_data')) || {};
 
-        // Nettoyage : suppression d'éventuels doublons manuels du Chorizo s'ils existaient
-        Object.keys(listeData).forEach(id => {
-            if (listeData[id].nom === "Chorizo" && !listeData[id].permanent) {
-                delete listeData[id];
-            }
-        });
-
-        Object.keys(produitsParRayon).forEach(rayon => {
-            produitsParRayon[rayon].forEach((nom, index) => {
-                const id = rayon + index;
-                if (!listeData[id]) listeData[id] = { id, nom, rayon, checked: false, qte: 1, permanent: true };
+        // Initialisation si vide
+        if (Object.keys(listeData).length === 0) {
+            Object.keys(baseProduits).forEach(rayon => {
+                baseProduits[rayon].forEach((nom, index) => {
+                    const id = rayon + index;
+                    listeData[id] = { id, nom, rayon, checked: false, qte: 1 };
+                });
             });
-        });
+        }
 
         function render() {
             document.getElementById('liste-a-prendre').innerHTML = "";
             const conteneurCoches = document.getElementById('liste-coches');
-            conteneurCoches.innerHTML = '<div class="rayon-titre">✅ Articles déjà pris</div>';
+            conteneurCoches.innerHTML = '<div class="header-rayon"><div class="rayon-titre">✅ Articles déjà pris</div></div>';
 
-            Object.values(listeData).forEach(item => {
-                const divItem = document.createElement('div');
-                divItem.className = 'produit-item';
-                divItem.innerHTML = `
-                    <label class="checkbox-label">
-                        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggle('${item.id}')">
-                        <span>${item.nom} ${item.qte > 1 ? '(x' + item.qte + ')' : ''}</span>
-                    </label>
-                    ${!item.checked ? `
-                    <div class="quantite-control">
-                        <button class="quantite-btn" onclick="modifierQte('${item.id}', -1)">-</button>
-                        <span>${item.qte}</span>
-                        <button class="quantite-btn" onclick="modifierQte('${item.id}', 1)">+</button>
-                    </div>` : ''}
+            configRayons.forEach(rayon => {
+                const zone = document.createElement('div');
+                zone.className = 'rayon';
+                zone.innerHTML = `
+                    <div class="header-rayon">
+                        <div class="rayon-titre">${rayon}</div>
+                        <button class="btn-plus-rayon" onclick="ajouterDansRayon('${rayon}')">+</button>
+                    </div>
                 `;
-
-                if (item.checked) conteneurCoches.appendChild(divItem);
-                else {
-                    const idRayon = 'rayon-' + item.rayon.replace(/\s/g, '');
-                    let zoneRayon = document.getElementById(idRayon);
-                    if (!zoneRayon) {
-                        zoneRayon = document.createElement('div');
-                        zoneRayon.id = idRayon;
-                        zoneRayon.className = 'rayon';
-                        zoneRayon.innerHTML = `<div class="rayon-titre">${item.rayon}</div>`;
-                        document.getElementById('liste-a-prendre').appendChild(zoneRayon);
-                    }
-                    zoneRayon.appendChild(divItem);
-                }
+                
+                Object.values(listeData).filter(i => i.rayon === rayon && !i.checked).forEach(item => {
+                    zone.appendChild(creerElementProduit(item));
+                });
+                document.getElementById('liste-a-prendre').appendChild(zone);
             });
+
+            Object.values(listeData).filter(i => i.checked).forEach(item => {
+                conteneurCoches.appendChild(creerElementProduit(item));
+            });
+        }
+
+        function creerElementProduit(item) {
+            const div = document.createElement('div');
+            div.className = 'produit-item';
+            div.innerHTML = `
+                <label class="checkbox-label">
+                    <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggle('${item.id}')">
+                    <span>${item.nom} ${item.qte > 1 ? '(x' + item.qte + ')' : ''}</span>
+                </label>
+                ${!item.checked ? `
+                <div class="quantite-control">
+                    <button class="quantite-btn" onclick="modifierQte('${item.id}', -1)">-</button>
+                    <span>${item.qte}</span>
+                    <button class="quantite-btn" onclick="modifierQte('${item.id}', 1)">+</button>
+                </div>` : ''}
+            `;
+            return div;
+        }
+
+        function ajouterDansRayon(rayon) {
+            const nom = prompt("Quel article ajouter dans " + rayon + " ?");
+            if (nom) {
+                const id = 'custom-' + Date.now();
+                listeData[id] = { id, nom, rayon, checked: false, qte: 1 };
+                sauvegarder();
+            }
         }
 
         function toggle(id) { listeData[id].checked = !listeData[id].checked; sauvegarder(); }
         function modifierQte(id, delta) { listeData[id].qte = Math.max(1, listeData[id].qte + delta); sauvegarder(); }
-        function ajouterArticleManuel() {
-            const input = document.getElementById('nouvel-article');
-            if (!input.value) return;
-            const id = 'custom-' + Date.now();
-            listeData[id] = { id, nom: input.value, rayon: "✨ Divers", checked: false, qte: 1, permanent: false };
-            input.value = "";
-            sauvegarder();
-        }
         function sauvegarder() { localStorage.setItem('liste_courses_data', JSON.stringify(listeData)); render(); }
-        function toutEffacer() { 
-            if(confirm("Réinitialiser ?")) { localStorage.clear(); location.reload(); }
-        }
+        function toutEffacer() { if(confirm("Réinitialiser toute la liste ?")) { localStorage.clear(); location.reload(); } }
         render();
     </script>
 </body>
