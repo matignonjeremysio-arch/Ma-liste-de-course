@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ma Super Liste de Courses</title>
+    <title>Ma Super Liste de Courses Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Variables de couleurs : Mode Clair par défaut */
         :root {
@@ -222,7 +223,7 @@
         }
 
         #liste-coches .quantite-control {
-            display: none; /* Cache les boutons +/- quand c'est coché */
+            display: none;
         }
 
         /* BOUTON RESET FOOTER */
@@ -246,7 +247,7 @@
 </head>
 <body>
 
-    <h1>🛒 Ma Liste Pro</h1>
+    <h1>🛒 Ma Liste Pro (Supabase)</h1>
 
     <div class="ajout-container">
         <input type="text" id="nouvel-article" placeholder="Ajouter un imprévu... (ex: Piles)">
@@ -264,64 +265,78 @@
     <button class="btn-reset" onclick="toutEffacer()">🔄 Tout Décocher</button>
 
     <script>
-        // Ta liste fixe de produits de base
-        const produitsParRayon = {
-            "🍉 Fruits & Légumes": [
-                {id: "p1", nom: "Raisin"}, {id: "p2", nom: "Tomate"}, {id: "p3", nom: "Melon"}, 
-                {id: "p4", nom: "Courgettes"}, {id: "p5", nom: "Brocoli"}
-            ],
-            "🥩 Frais & Viande": [
-                {id: "p6", nom: "Jambon"}, {id: "p7", nom: "Fromage"}, {id: "p8", nom: "Yaourt"}, 
-                {id: "p9", nom: "Knacki"}, {id: "p10", nom: "Saucisson"}, {id: "p11", nom: "Saumon"}, 
-                {id: "p12", nom: "Poisson"}
-            ],
-            "🥐 Épicerie": [
-                {id: "p13", nom: "Petit déj (Céréales)"}, {id: "p14", nom: "Chips"}, {id: "p15", nom: "Lentilles"}
-            ],
-            "🍾 Boissons": [
-                {id: "p16", nom: "Limonade"}, {id: "p17", nom: "Jus de fruit"}
-            ],
-            "🧼 Hygiène & Maison": [
-                {id: "p18", nom: "Dentifrice"}, {id: "p19", nom: "Déodorant"}, {id: "p20", nom: "Pastilles lave-vaisselle"}
-            ]
-        };
+        // CONFIGURATION AUTOMATIQUE DE TES VRAIES CLÉS SUPABASE
+        const SUPABASE_URL = "https://qifetgvwxhdzvikmypca.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpZmV0Z3Z3eGgkemZpa215cGNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5OTYwNDMsImV4cCI6MjA4NjU3MjA0M30.F_B49X69R0hUjA-BskT_XJscZ9_y-M9W_f5CjE604bQ"; 
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const conteneurAPrendre = document.getElementById('liste-a-prendre');
         const conteneurCoches = document.getElementById('liste-coches');
+        let listeData = {};
 
-        // Charger ou initialiser la base de données des produits dynamiques (pour inclure les ajouts manuels et quantités)
-        let listeData = JSON.parse(localStorage.getItem('liste_courses_data')) || {};
+        // 1. CHARGEMENT ET MISE À JOUR EN DIRECT (REALTIME)
+        async function initialiserDonnees() {
+            try {
+                // Récupération initiale de la table "liste_courses"
+                const { data, error } = await supabase.from('liste_courses').select('*');
+                if (error) throw error;
 
-        // Initialiser les produits de base s'ils n'existent pas encore en mémoire
-        Object.keys(produitsParRayon).forEach(rayon => {
-            produitsParRayon[rayon].forEach(p => {
-                if (!listeData[p.id]) {
-                    listeData[p.id] = { id: p.id, nom: p.nom, rayon: rayon, checked: false, qte: 1, permanent: true };
+                if (data) {
+                    data.forEach(item => {
+                        listeData[item.id] = item;
+                    });
                 }
-            });
-        });
 
-        function sauvegarderDonnees() {
-            localStorage.setItem('liste_courses_data', JSON.stringify(listeData));
+                rafraichirAffichageDOM();
+
+                // Écoute en temps réel des changements faits sur l'autre téléphone
+                supabase
+                    .channel('schema-db-changes')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'liste_courses' }, payload => {
+                        if (payload.eventType === 'DELETE') {
+                            delete listeData[payload.old.id];
+                        } else {
+                            listeData[payload.new.id] = payload.new;
+                        }
+                        rafraichirAffichageDOM();
+                    })
+                    .subscribe();
+
+            } catch (err) {
+                console.error("Erreur de connexion :", err.message);
+            }
         }
 
-        // Création visuelle d'une ligne d'article
+        function rafraichirAffichageDOM() {
+            conteneurAPrendre.innerHTML = "";
+            conteneurCoches.innerHTML = '<div class="rayon-titre">✅ Articles déjà pris</div>';
+            
+            // Trier les articles pour les ranger par rayon
+            Object.values(listeData).forEach(item => {
+                const element = genererDOMArticle(item);
+                deplacerVisuellement(item, element);
+            });
+        }
+
+        async function sauvegarderItemBdd(item) {
+            await supabase.from('liste_courses').upsert(item);
+        }
+
         function genererDOMArticle(item) {
             const divItem = document.createElement('div');
             divItem.className = 'produit-item';
             divItem.id = `item-${item.id}`;
 
-            // Partie Checkbox + Texte
             const label = document.createElement('label');
             label.className = 'checkbox-label';
             
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = item.checked;
-            checkbox.addEventListener('change', () => {
+            checkbox.addEventListener('change', async () => {
                 item.checked = checkbox.checked;
-                sauvegarderDonnees();
-                deplacerVisuellement(item, divItem);
+                await sauvegarderItemBdd(item);
             });
 
             const span = document.createElement('span');
@@ -332,25 +347,18 @@
             label.appendChild(span);
             divItem.appendChild(label);
 
-            // Partie Boutons quantité (+ / -)
             const divQte = document.createElement('div');
             divQte.className = 'quantite-control';
 
             const btnMoins = document.createElement('button');
             btnMoins.className = 'quantite-btn';
             btnMoins.textContent = '-';
-            btnMoins.addEventListener('click', () => {
+            btnMoins.addEventListener('click', async () => {
                 if (item.qte > 1) {
                     item.qte--;
-                    document.getElementById(`qte-${item.id}`).textContent = item.qte;
-                    document.getElementById(`badge-${item.id}`).textContent = item.qte > 1 ? `(x${item.qte})` : '';
-                    sauvegarderDonnees();
+                    await sauvegarderItemBdd(item);
                 } else if (!item.permanent) {
-                    // Si c'est un article manuel et qte tombe à 0, on le supprime
-                    delete listeData[item.id];
-                    sauvegarderDonnees();
-                    divItem.remove();
-                    nettoyerRayonsVides();
+                    await supabase.from('liste_courses').delete().eq('id', item.id);
                 }
             });
 
@@ -362,11 +370,9 @@
             const btnPlus = document.createElement('button');
             btnPlus.className = 'quantite-btn';
             btnPlus.textContent = '+';
-            btnPlus.addEventListener('click', () => {
+            btnPlus.addEventListener('click', async () => {
                 item.qte++;
-                document.getElementById(`qte-${item.id}`).textContent = item.qte;
-                document.getElementById(`badge-${item.id}`).textContent = `(x${item.qte})`;
-                sauvegarderDonnees();
+                await sauvegarderItemBdd(item);
             });
 
             divQte.appendChild(btnMoins);
@@ -377,7 +383,6 @@
             return divItem;
         }
 
-        // Gérer le placement en haut (dans le bon rayon) ou en bas (coché)
         function deplacerVisuellement(item, elementHTML) {
             if (item.checked) {
                 conteneurCoches.appendChild(elementHTML);
@@ -399,13 +404,11 @@
 
         function nettoyerRayonsVides() {
             document.querySelectorAll('.rayon').forEach(r => {
-                // Si le rayon n'a plus d'enfants à part son titre, on le vire
                 if (r.children.length <= 1) r.remove();
             });
         }
 
-        // Ajouter un produit manuellement via la barre du haut
-        function ajouterArticleManuel() {
+        async function ajouterArticleManuel() {
             const input = document.getElementById('nouvel-article');
             const nom = input.value.trim();
             if (!nom) return;
@@ -420,42 +423,29 @@
                 permanent: false
             };
 
-            listeData[idUnique] = nouvelItem;
-            sauvegarderDonnees();
-
-            const elementDOM = genererDOMArticle(nouvelItem);
-            deplacerVisuellement(nouvelItem, elementDOM);
-
-            input.value = ''; // Reset l'input
+            await sauvegarderItemBdd(nouvelItem);
+            input.value = '';
         }
 
-        // Lancer l'ajout rapide aussi avec la touche "Entrée" du clavier
         document.getElementById('nouvel-article').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') ajouterArticleManuel();
         });
 
-        // TOUT DÉCOCHER (Pour les courses suivantes)
-        function toutEffacer() {
+        async function toutEffacer() {
             if (confirm("Réinitialiser la liste pour vos prochaines courses ?")) {
-                Object.keys(listeData).forEach(id => {
+                for (const id of Object.keys(listeData)) {
                     if (listeData[id].permanent) {
                         listeData[id].checked = false;
-                        listeData[id].qte = 1; // Reset les quantités aussi
+                        listeData[id].qte = 1;
+                        await sauvegarderItemBdd(listeData[id]);
                     } else {
-                        // Supprime les articles ajoutés à la main pour ne pas encombrer
-                        delete listeData[id];
+                        await supabase.from('liste_courses').delete().eq('id', id);
                     }
-                });
-                sauvegarderDonnees();
-                window.location.reload(); // Recharge proprement l'affichage
+                }
             }
         }
 
-        // Rendu initial au chargement de la page
-        Object.values(listeData).forEach(item => {
-            const element = genererDOMArticle(item);
-            deplacerVisuellement(item, element);
-        });
+        initialiserDonnees();
     </script>
 </body>
 </html>
