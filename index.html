@@ -2,29 +2,79 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Test Connexion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ma Liste de Courses</title>
+    <style>
+        :root { --bg-color: #f4f6f9; --card-bg: #ffffff; --text-color: #2c3e50; --accent-color: #3498db; --checked-color: #95a5a6; --coché-bg: #eaeded; --border-color: #e2e8f0; }
+        body { font-family: sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; }
+        h1 { text-align: center; }
+        .ajout-container { display: flex; gap: 10px; margin-bottom: 20px; background: var(--card-bg); padding: 10px; border-radius: 12px; }
+        input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .rayon-titre { color: var(--accent-color); font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-bottom: 10px; }
+        .produit-item { display: flex; justify-content: space-between; padding: 10px 0; align-items: center; }
+        .btn-reset { width: 100%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <h1>Test Connexion</h1>
-    <div id="debug">Test en cours...</div>
+
+    <h1>🛒 Ma Liste</h1>
+    <div class="ajout-container">
+        <input type="text" id="nouvel-article" placeholder="Ajouter un article...">
+        <button onclick="ajouter()">+</button>
+    </div>
+
+    <div id="liste-container"></div>
+    <button class="btn-reset" onclick="toutEffacer()">Réinitialiser la liste</button>
 
     <script>
-        const URL = "https://qifetgvwxhdzvikmypca.supabase.co/rest/v1/liste_courses?select=*";
-        const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpZmV0Z3Z3eGgkemZpa215cGNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5OTYwNDMsImV4cCI6MjA4NjU3MjA0M30.F_B49X69R0hUjA-BskT_XJscZ9_y-M9W_f5CjE604bQ";
+        // Initialisation de la liste par défaut
+        let data = JSON.parse(localStorage.getItem('liste_courses')) || [
+            { nom: "Raisin", rayon: "Fruits", checked: false },
+            { nom: "Jambon", rayon: "Viande", checked: false },
+            { nom: "Pain", rayon: "Boulangerie", checked: false }
+        ];
 
-        fetch(URL, {
-            headers: {
-                'apikey': KEY,
-                'Authorization': 'Bearer ' + KEY
+        function afficher() {
+            const container = document.getElementById('liste-container');
+            container.innerHTML = "";
+            data.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'rayon';
+                div.innerHTML = `
+                    <div class="produit-item">
+                        <label>
+                            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggle(${index})">
+                            ${item.nom}
+                        </label>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggle(index) {
+            data[index].checked = !data[index].checked;
+            localStorage.setItem('liste_courses', JSON.stringify(data));
+            afficher();
+        }
+
+        function ajouter() {
+            const input = document.getElementById('nouvel-article');
+            if (input.value) {
+                data.push({ nom: input.value, rayon: "Divers", checked: false });
+                localStorage.setItem('liste_courses', JSON.stringify(data));
+                input.value = "";
+                afficher();
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('debug').innerText = "Données reçues : " + JSON.stringify(data);
-        })
-        .catch(err => {
-            document.getElementById('debug').innerText = "Erreur bloquante : " + err.message;
-        });
+        }
+
+        function toutEffacer() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        afficher();
     </script>
 </body>
 </html>
