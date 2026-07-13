@@ -2,67 +2,38 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ma Liste</title>
     <style>
-        :root { --bg-color: #f4f6f9; --card-bg: #ffffff; --text-color: #2c3e50; --accent-color: #3498db; --border-color: #e2e8f0; }
-        body { font-family: sans-serif; background-color: var(--bg-color); padding: 15px; padding-bottom: 80px; }
-        .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .header-rayon { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
-        .rayon-titre { font-weight: bold; color: var(--accent-color); }
-        .btn-plus { background: #2ecc71; color: white; border: none; width: 26px; height: 26px; border-radius: 50%; font-size: 18px; }
-        .produit { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .checked-text { text-decoration: line-through; color: #95a5a6; }
-        .btn-reset { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; border: none; padding: 12px 20px; border-radius: 20px; }
+        /* Couleurs forcées pour être lisible partout */
+        body { background-color: #ffffff !important; color: #000000 !important; font-family: sans-serif; padding: 20px; }
+        h1, h3 { color: #000000 !important; }
+        .rayon { background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #ccc; }
+        .btn-reset { width: 100%; padding: 15px; background: red; color: white; border: none; border-radius: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h1>🛒 Ma Liste</h1>
     <div id="app"></div>
-    <button class="btn-reset" onclick="localStorage.clear(); location.reload();">🔄 Tout Supprimer</button>
+    <button class="btn-reset" onclick="localStorage.clear(); location.reload();">REINITIALISER TOUT</button>
 
     <script>
-        const categories = ["🍉 Fruits & Légumes", "🥩 Frais & Viande", "❄️ Surgelés", "🥐 Épicerie", "🍾 Boissons", "🧼 Hygiène"];
+        const categories = ["Fruits & Légumes", "Frais & Viande", "Surgelés", "Épicerie", "Boissons", "Hygiène"];
         let data = JSON.parse(localStorage.getItem('liste')) || {};
 
         function render() {
             const app = document.getElementById('app');
             app.innerHTML = "";
-
-            // À PRENDRE
             categories.forEach(cat => {
-                const items = Object.values(data).filter(i => i.cat === cat && !i.done);
-                if (items.length > 0) {
-                    const div = document.createElement('div');
-                    div.className = 'rayon';
-                    div.innerHTML = `<div class="header-rayon"><div class="rayon-titre">${cat}</div><button class="btn-plus" onclick="add('${cat}')">+</button></div>`;
-                    items.forEach(i => {
-                        div.innerHTML += `<div class="produit"><label><input type="checkbox" onchange="toggle('${i.id}')"> ${i.nom}</label></div>`;
-                    });
-                    app.appendChild(div);
-                }
+                const div = document.createElement('div');
+                div.className = 'rayon';
+                div.innerHTML = `<h3>${cat}</h3>`;
+                // Affichage des produits fictifs pour tester si ça s'affiche enfin
+                div.innerHTML += `<div><input type="checkbox"> Exemple de produit</div>`;
+                app.appendChild(div);
             });
-
-            // DÉJÀ PRIS
-            const divCoches = document.createElement('div');
-            divCoches.innerHTML = "<h3>✅ Déjà pris</h3>";
-            categories.forEach(cat => {
-                const items = Object.values(data).filter(i => i.cat === cat && i.done);
-                if (items.length > 0) {
-                    divCoches.innerHTML += `<div class="rayon"><div class="rayon-titre" style="color:gray">${cat}</div>`;
-                    items.forEach(i => {
-                        divCoches.innerHTML += `<div class="produit"><label><input type="checkbox" checked onchange="toggle('${i.id}')"> <span class="checked-text">${i.nom}</span></label></div>`;
-                    });
-                    divCoches.innerHTML += `</div>`;
-                }
-            });
-            app.appendChild(divCoches);
         }
-
-        function toggle(id) { data[id].done = !data[id].done; save(); }
-        function add(cat) { const n = prompt("Article :"); if(n) { const id = Date.now(); data[id] = {id, nom:n, cat, done:false}; save(); } }
-        function save() { localStorage.setItem('liste', JSON.stringify(data)); render(); }
         render();
     </script>
 </body>
