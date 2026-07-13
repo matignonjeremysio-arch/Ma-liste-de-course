@@ -29,9 +29,7 @@
 
     <h1>🛒 Ma Liste Pro</h1>
     <div id="liste-a-prendre"></div>
-    <div id="liste-coches">
-        <div class="header-rayon"><div class="rayon-titre">✅ Articles déjà pris</div></div>
-    </div>
+    <div id="liste-coches"></div>
 
     <button class="btn-reset" onclick="toutEffacer()">🔄 Réinitialiser la liste</button>
 
@@ -47,7 +45,6 @@
 
         let listeData = JSON.parse(localStorage.getItem('liste_courses_data')) || {};
 
-        // Initialisation si vide
         if (Object.keys(listeData).length === 0) {
             Object.keys(baseProduits).forEach(rayon => {
                 baseProduits[rayon].forEach((nom, index) => {
@@ -59,28 +56,37 @@
 
         function render() {
             document.getElementById('liste-a-prendre').innerHTML = "";
-            const conteneurCoches = document.getElementById('liste-coches');
-            conteneurCoches.innerHTML = '<div class="header-rayon"><div class="rayon-titre">✅ Articles déjà pris</div></div>';
+            document.getElementById('liste-coches').innerHTML = "";
 
             configRayons.forEach(rayon => {
-                const zone = document.createElement('div');
-                zone.className = 'rayon';
-                zone.innerHTML = `
-                    <div class="header-rayon">
-                        <div class="rayon-titre">${rayon}</div>
-                        <button class="btn-plus-rayon" onclick="ajouterDansRayon('${rayon}')">+</button>
-                    </div>
-                `;
-                
-                Object.values(listeData).filter(i => i.rayon === rayon && !i.checked).forEach(item => {
-                    zone.appendChild(creerElementProduit(item));
-                });
-                document.getElementById('liste-a-prendre').appendChild(zone);
-            });
+                // Zone à prendre
+                const itemsAPrendre = Object.values(listeData).filter(i => i.rayon === rayon && !i.checked);
+                if (itemsAPrendre.length > 0) {
+                    const zone = creerZoneRayon(rayon, false);
+                    itemsAPrendre.forEach(item => zone.appendChild(creerElementProduit(item)));
+                    document.getElementById('liste-a-prendre').appendChild(zone);
+                }
 
-            Object.values(listeData).filter(i => i.checked).forEach(item => {
-                conteneurCoches.appendChild(creerElementProduit(item));
+                // Zone déjà pris
+                const itemsCoches = Object.values(listeData).filter(i => i.rayon === rayon && i.checked);
+                if (itemsCoches.length > 0) {
+                    const zone = creerZoneRayon(rayon, true);
+                    itemsCoches.forEach(item => zone.appendChild(creerElementProduit(item)));
+                    document.getElementById('liste-coches').appendChild(zone);
+                }
             });
+        }
+
+        function creerZoneRayon(rayon, isChecked) {
+            const zone = document.createElement('div');
+            zone.className = 'rayon';
+            zone.innerHTML = `
+                <div class="header-rayon">
+                    <div class="rayon-titre">${isChecked ? '✅ ' : ''}${rayon}</div>
+                    ${!isChecked ? `<button class="btn-plus-rayon" onclick="ajouterDansRayon('${rayon}')">+</button>` : ''}
+                </div>
+            `;
+            return zone;
         }
 
         function creerElementProduit(item) {
