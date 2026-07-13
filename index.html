@@ -3,28 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <title>Ma Liste</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
     <h1>🛒 Ma Liste</h1>
-    <div id="liste">Chargement...</div>
+    <div id="liste">Connexion en cours...</div>
 
     <script>
         const SUPABASE_URL = "https://qifetgvwxhdzvikmypca.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpZmV0Z3Z3eGgkemZpa215cGNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5OTYwNDMsImV4cCI6MjA4NjU3MjA0M30.F_B49X69R0hUjA-BskT_XJscZ9_y-M9W_f5CjE604bQ";
 
-        // Initialisation sécurisée
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        async function charger() {
-            const { data, error } = await supabaseClient.from('liste_courses').select('*');
-            if (error) {
-                document.getElementById('liste').innerText = "Erreur : " + error.message;
-            } else {
-                document.getElementById('liste').innerText = "Connexion OK ! Articles trouvés : " + data.length;
+        // On vérifie immédiatement si supabase est chargé
+        if (typeof supabase === 'undefined') {
+            document.getElementById('liste').innerText = "Erreur : La bibliothèque Supabase n'est pas chargée. Vérifie ta connexion internet ou ton bloqueur de publicités.";
+        } else {
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            async function charger() {
+                try {
+                    const { data, error } = await supabaseClient.from('liste_courses').select('*');
+                    if (error) {
+                        document.getElementById('liste').innerText = "Erreur BDD : " + error.message;
+                    } else {
+                        document.getElementById('liste').innerText = "Succès ! Articles trouvés : " + (data ? data.length : 0);
+                    }
+                } catch (e) {
+                    document.getElementById('liste').innerText = "Erreur de connexion : " + e.message;
+                }
             }
+            charger();
         }
-        charger();
     </script>
 </body>
 </html>
