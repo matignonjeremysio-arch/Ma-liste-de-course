@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ma Liste</title>
     <style>
-        /* Couleurs forcées pour éviter les bugs d'affichage sombre/clair */
-        body { background-color: #1e1e1e !important; color: #ffffff !important; font-family: sans-serif; padding: 15px; margin: 0; padding-bottom: 80px; }
+        /* Couleurs forcées pour la lisibilité sur iPhone */
+        body { background-color: #1e1e1e !important; color: #ffffff !important; font-family: -apple-system, sans-serif; padding: 15px; margin: 0; padding-bottom: 80px; }
         .rayon { background: #2d2d2d !important; border-left: 5px solid #3498db; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
-        .rayon-done { background: #252525 !important; border-left: 5px solid #7f8c8d; border-radius: 8px; padding: 12px; margin-bottom: 10px; opacity: 0.9; }
+        .rayon-done { background: #252525 !important; border-left: 5px solid #7f8c8d; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
         .header-rayon { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .rayon-titre { font-weight: bold; color: #ffffff !important; font-size: 1.1em; }
-        .btn-plus { background: #2ecc71; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; }
+        .btn-plus { background: #2ecc71; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; font-size: 18px; }
         .produit { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid #444; }
         .checked-text { text-decoration: line-through; color: #7f8c8d; }
         .btn-reset { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: bold; }
-        .quantite-control { display: flex; align-items: center; gap: 8px; }
-        .quantite-btn { background: #444; color: white; border: none; width: 25px; height: 25px; border-radius: 50%; }
+        .quantite-control { display: flex; align-items: center; gap: 10px; }
+        .quantite-btn { background: #444; color: white; border: none; width: 26px; height: 26px; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -27,7 +27,22 @@
 
     <script>
         const categories = ["🍉 Fruits & Légumes", "🥩 Frais & Viande", "❄️ Surgelés", "🥐 Épicerie", "🍾 Boissons", "🧼 Hygiène"];
+        const baseItems = [
+            {nom: "Raisin", cat: "🍉 Fruits & Légumes"}, {nom: "Tomate", cat: "🍉 Fruits & Légumes"}, {nom: "Carottes", cat: "🍉 Fruits & Légumes"}, {nom: "Carottes râpées", cat: "🍉 Fruits & Légumes"},
+            {nom: "Jambon", cat: "🥩 Frais & Viande"}, {nom: "Lait bleu", cat: "🥩 Frais & Viande"}, {nom: "Lait vert", cat: "🥩 Frais & Viande"}, {nom: "Oeufs", cat: "🥩 Frais & Viande"}, {nom: "Yaourt", cat: "🥩 Frais & Viande"}, {nom: "Chorizo", cat: "🥩 Frais & Viande"},
+            {nom: "Olives vertes", cat: "🥐 Épicerie"}, {nom: "Olives noires", cat: "🥐 Épicerie"},
+            {nom: "Glace", cat: "❄️ Surgelés"}
+        ];
+
         let data = JSON.parse(localStorage.getItem('liste')) || {};
+
+        // Initialisation si vide
+        if (Object.keys(data).length === 0) {
+            baseItems.forEach((item, index) => {
+                data[index] = { id: index, nom: item.nom, cat: item.cat, done: false, qte: 1 };
+            });
+            save();
+        }
 
         function render() {
             const app = document.getElementById('app');
@@ -42,15 +57,15 @@
                     div.innerHTML = `<div class="header-rayon"><div class="rayon-titre">${cat}</div><button class="btn-plus" onclick="add('${cat}')">+</button></div>`;
                     items.forEach(i => {
                         div.innerHTML += `<div class="produit">
-                            <label><input type="checkbox" onchange="toggle('${i.id}')"> ${i.nom} ${i.qte > 1 ? '(x' + i.qte + ')' : ''}</label>
-                            <div class="quantite-control"><button class="quantite-btn" onclick="qte('${i.id}', -1)">-</button>${i.qte}<button class="quantite-btn" onclick="qte('${i.id}', 1)">+</button></div>
+                            <label><input type="checkbox" onchange="toggle(${i.id})"> ${i.nom} ${i.qte > 1 ? '(x' + i.qte + ')' : ''}</label>
+                            <div class="quantite-control"><button class="quantite-btn" onclick="qte(${i.id}, -1)">-</button>${i.qte}<button class="quantite-btn" onclick="qte(${i.id}, 1)">+</button></div>
                         </div>`;
                     });
                     app.appendChild(div);
                 }
             });
 
-            // DÉJÀ PRIS
+            // DÉJÀ PRIS (Triés par catégorie)
             const doneDiv = document.createElement('div');
             doneDiv.innerHTML = "<h3 style='color:#7f8c8d; margin-top:30px;'>✅ Déjà pris</h3>";
             categories.forEach(cat => {
@@ -58,7 +73,7 @@
                 if (items.length > 0) {
                     doneDiv.innerHTML += `<div class="rayon-done"><div class="rayon-titre" style="color:#7f8c8d">${cat}</div>`;
                     items.forEach(i => {
-                        doneDiv.innerHTML += `<div class="produit"><label><input type="checkbox" checked onchange="toggle('${i.id}')"> <span class="checked-text">${i.nom}</span></label></div>`;
+                        doneDiv.innerHTML += `<div class="produit"><label><input type="checkbox" checked onchange="toggle(${i.id})"> <span class="checked-text">${i.nom}</span></label></div>`;
                     });
                     doneDiv.innerHTML += `</div>`;
                 }
