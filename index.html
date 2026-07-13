@@ -67,9 +67,4 @@
         function toggle(id) { data.find(i => i.id === id).done = !data.find(i => i.id === id).done; save(); }
         function changeQty(id, delta) { const item = data.find(i => i.id === id); item.qty = Math.max(1, (item.qty || 1) + delta); save(); }
         function add(cat) { const n = prompt("Article :"); if(n) { data.push({id: Date.now(), nom: n, cat: cat, done: false, qty: 1}); save(); } }
-        function resetList() { if(confirm("Vider toute la liste ?")) { localStorage.clear(); location.reload(); } }
-        function save() { localStorage.setItem('myList', JSON.stringify(data)); render(); }
-        render();
-    </script>
-</body>
-</html>
+        function
