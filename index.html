@@ -11,11 +11,10 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; padding-bottom: 100px; }
         h1 { text-align: center; font-size: 22px; margin-bottom: 15px; }
-        .ajout-container { display: flex; gap: 10px; margin-bottom: 20px; background: var(--card-bg); padding: 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .ajout-container input { flex: 1; border: 2px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); padding: 10px; border-radius: 8px; outline: none; }
-        .ajout-container button { background-color: #2ecc71; color: white; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .rayon-titre { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
+        .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .rayon-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
+        .rayon-titre { font-size: 16px; font-weight: bold; color: var(--accent-color); }
+        .btn-plus-cat { background-color: #2ecc71; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; }
         .produit-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
         .checkbox-label { display: flex; align-items: center; flex: 1; cursor: pointer; }
         input[type="checkbox"] { width: 22px; height: 22px; border: 2px solid var(--checked-color); border-radius: 6px; margin-right: 12px; cursor: pointer; appearance: none; background-color: var(--input-bg); }
@@ -28,14 +27,7 @@
 <body>
 
     <h1>🛒 Ma Liste Pro</h1>
-    <div class="ajout-container">
-        <input type="text" id="nouvel-article" placeholder="Ajouter un article...">
-        <button onclick="ajouterArticleManuel()">+</button>
-    </div>
-
-    <div id="liste-a-prendre"></div>
-    <div id="liste-coches"></div>
-
+    <div id="liste-globale"></div>
     <button class="btn-reset" onclick="toutEffacer()">🔄 Tout Décocher</button>
 
     <script>
@@ -50,7 +42,7 @@
 
         let listeData = JSON.parse(localStorage.getItem('liste_courses_data')) || {};
 
-        // Initialisation des produits permanents
+        // Initialisation
         Object.keys(produitsParRayon).forEach(rayon => {
             produitsParRayon[rayon].forEach((nom, index) => {
                 const id = rayon + index;
@@ -59,63 +51,46 @@
         });
 
         function render() {
-            document.getElementById('liste-a-prendre').innerHTML = "";
-            document.getElementById('liste-coches').innerHTML = "";
+            const conteneur = document.getElementById('liste-globale');
+            conteneur.innerHTML = "";
 
             Object.keys(produitsParRayon).forEach(rayon => {
-                const itemsDansRayon = Object.values(listeData).filter(item => item.rayon === rayon);
-                
-                // 1. Zone à prendre
-                const aPrendre = itemsDansRayon.filter(i => !i.checked);
-                if (aPrendre.length > 0) {
-                    const zone = creerZone(rayon, aPrendre, false);
-                    document.getElementById('liste-a-prendre').appendChild(zone);
-                }
+                const items = Object.values(listeData).filter(item => item.rayon === rayon);
+                const aPrendre = items.filter(i => !i.checked);
+                const dejaPris = items.filter(i => i.checked);
 
-                // 2. Zone déjà pris
-                const dejaPris = itemsDansRayon.filter(i => i.checked);
-                if (dejaPris.length > 0) {
-                    const zone = creerZone(rayon, dejaPris, true);
-                    document.getElementById('liste-coches').appendChild(zone);
+                if (aPrendre.length > 0 || dejaPris.length > 0) {
+                    const div = document.createElement('div');
+                    div.className = 'rayon';
+                    div.innerHTML = `
+                        <div class="rayon-header">
+                            <span class="rayon-titre">${rayon}</span>
+                            <button class="btn-plus-cat" onclick="ajouterArticle('${rayon}')">+</button>
+                        </div>`;
+                    
+                    // Liste des articles
+                    items.forEach(item => {
+                        div.innerHTML += `
+                            <div class="produit-item" style="${item.checked ? 'opacity: 0.6;' : ''}">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggle('${item.id}')">
+                                    <span style="${item.checked ? 'text-decoration: line-through;' : ''}">${item.nom} ${item.qte > 1 ? '(x' + item.qte + ')' : ''}</span>
+                                </label>
+                                ${!item.checked ? `
+                                <div class="quantite-control">
+                                    <button class="quantite-btn" onclick="modifierQte('${item.id}', -1)">-</button>
+                                    <span>${item.qte}</span>
+                                    <button class="quantite-btn" onclick="modifierQte('${item.id}', 1)">+</button>
+                                </div>` : ''}
+                            </div>`;
+                    });
+                    conteneur.appendChild(div);
                 }
             });
-        }
-
-        function creerZone(titre, items, isChecked) {
-            const div = document.createElement('div');
-            div.className = 'rayon';
-            div.innerHTML = `<div class="rayon-titre">${isChecked ? '✅ ' : ''}${titre}</div>`;
-            items.forEach(item => {
-                div.innerHTML += `
-                    <div class="produit-item">
-                        <label class="checkbox-label">
-                            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggle('${item.id}')">
-                            <span>${item.nom} ${item.qte > 1 ? '(x' + item.qte + ')' : ''}</span>
-                        </label>
-                        ${!item.checked ? `
-                        <div class="quantite-control">
-                            <button class="quantite-btn" onclick="modifierQte('${item.id}', -1)">-</button>
-                            <span>${item.qte}</span>
-                            <button class="quantite-btn" onclick="modifierQte('${item.id}', 1)">+</button>
-                        </div>` : ''}
-                    </div>`;
-            });
-            return div;
         }
 
         function toggle(id) { listeData[id].checked = !listeData[id].checked; sauvegarder(); }
         function modifierQte(id, delta) { listeData[id].qte = Math.max(1, listeData[id].qte + delta); sauvegarder(); }
-        function ajouterArticleManuel() {
-            const input = document.getElementById('nouvel-article');
-            if (!input.value) return;
-            const id = 'custom-' + Date.now();
-            listeData[id] = { id, nom: input.value, rayon: "✨ Divers", checked: false, qte: 1, permanent: false };
-            input.value = "";
-            sauvegarder();
-        }
-        function sauvegarder() { localStorage.setItem('liste_courses_data', JSON.stringify(listeData)); render(); }
-        function toutEffacer() { if(confirm("Réinitialiser ?")) { localStorage.clear(); location.reload(); } }
-        render();
-    </script>
-</body>
-</html>
+        function ajouterArticle(rayon) {
+            const nom = prompt("Ajouter un article dans " + rayon + ":");
+            if (!nom) return;
