@@ -2,69 +2,91 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ma Liste de Courses</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ma Liste</title>
     <style>
-        body { background-color: #121212 !important; color: #ffffff !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; margin: 0; }
-        .rayon { background: #1e1e1e; border-left: 4px solid #3498db; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
-        .done-rayon { background: #1e1e1e; border-left: 4px solid #555; padding: 12px; border-radius: 8px; margin-bottom: 15px; opacity: 0.7; }
-        .item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
-        .btn-add { background: #2ecc71; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; cursor: pointer; }
-        .btn-qty { background: #444; color: white; border: none; border-radius: 5px; padding: 2px 8px; margin: 0 5px; cursor: pointer; }
-        .btn-reset { width: 100%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        :root { --bg-color: #f4f6f9; --card-bg: #ffffff; --text-color: #2c3e50; --accent-color: #3498db; --border-color: #e2e8f0; }
+        body { font-family: sans-serif; background-color: var(--bg-color); padding: 15px; padding-bottom: 80px; }
+        .rayon { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .header-rayon { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
+        .rayon-titre { font-weight: bold; color: var(--accent-color); }
+        .btn-plus { background: #2ecc71; color: white; border: none; width: 26px; height: 26px; border-radius: 50%; font-size: 18px; }
+        .produit { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .checked-text { text-decoration: line-through; color: #95a5a6; }
+        .btn-reset { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; border: none; padding: 12px 20px; border-radius: 20px; }
+        .qte-control { display: flex; align-items: center; gap: 8px; }
+        .qte-btn { background: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; width: 24px; height: 24px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <h1>🛒 Ma Liste</h1>
     <div id="app"></div>
-    <button class="btn-reset" onclick="resetList()">🔄 Réinitialiser la liste</button>
+    <button class="btn-reset" onclick="localStorage.clear(); location.reload();">🔄 Tout Supprimer</button>
 
     <script>
-        const cats = ["🍉 Fruits & Légumes", "🥩 Frais & Viande", "❄️ Surgelés", "🥐 Épicerie", "🍾 Boissons", "🧼 Hygiène"];
-        const itemsInit = [
-            {n: "Raisin", c: "🍉 Fruits & Légumes"}, {n: "Tomate", c: "🍉 Fruits & Légumes"}, {n: "Carottes", c: "🍉 Fruits & Légumes"}, {n: "Carottes râpées", c: "🍉 Fruits & Légumes"},
-            {n: "Jambon", c: "🥩 Frais & Viande"}, {n: "Lait bleu", c: "🥩 Frais & Viande"}, {n: "Lait vert", c: "🥩 Frais & Viande"}, {n: "Oeufs", c: "🥩 Frais & Viande"}, {n: "Yaourt", c: "🥩 Frais & Viande"}, {n: "Chorizo", c: "🥩 Frais & Viande"},
-            {n: "Glace", c: "❄️ Surgelés"}, {n: "Olives vertes", c: "🥐 Épicerie"}, {n: "Olives noires", c: "🥐 Épicerie"}, {n: "Dentifrice", c: "🧼 Hygiène"}, {n: "Limonade", c: "🍾 Boissons"}
+        const categories = ["🍉 Fruits & Légumes", "🥩 Frais & Viande", "❄️ Surgelés", "🥐 Épicerie", "🍾 Boissons", "🧼 Hygiène"];
+        const initItems = [
+            {nom: "Raisin", cat: "🍉 Fruits & Légumes"}, {nom: "Tomate", cat: "🍉 Fruits & Légumes"}, {nom: "Carottes", cat: "🍉 Fruits & Légumes"}, {nom: "Carottes râpées", cat: "🍉 Fruits & Légumes"},
+            {nom: "Jambon", cat: "🥩 Frais & Viande"}, {nom: "Lait bleu", cat: "🥩 Frais & Viande"}, {nom: "Lait vert", cat: "🥩 Frais & Viande"}, {nom: "Oeufs", cat: "🥩 Frais & Viande"}, {nom: "Yaourt", cat: "🥩 Frais & Viande"}, {nom: "Chorizo", cat: "🥩 Frais & Viande"},
+            {nom: "Glace", cat: "❄️ Surgelés"}, {nom: "Olives vertes", cat: "🥐 Épicerie"}, {nom: "Olives noires", cat: "🥐 Épicerie"}, {nom: "Dentifrice", cat: "🧼 Hygiène"}, {nom: "Limonade", cat: "🍾 Boissons"}
         ];
 
-        let data = JSON.parse(localStorage.getItem('myList')) || itemsInit.map((item, i) => ({id: i, nom: item.n, cat: item.c, done: false, qty: 1}));
+        let data = JSON.parse(localStorage.getItem('liste')) || {};
+
+        // Initialisation si vide
+        if (Object.keys(data).length === 0) {
+            initItems.forEach((item, index) => {
+                const id = 'init_' + index;
+                data[id] = {id, nom: item.nom, cat: item.cat, done: false, qte: 1};
+            });
+            save();
+        }
 
         function render() {
             const app = document.getElementById('app');
             app.innerHTML = "";
-            cats.forEach(c => {
-                const items = data.filter(i => i.cat === c && !i.done);
+
+            categories.forEach(cat => {
+                const items = Object.values(data).filter(i => i.cat === cat && !i.done);
                 if (items.length > 0) {
                     const div = document.createElement('div');
                     div.className = 'rayon';
-                    div.innerHTML = `<div style="display:flex; justify-content:space-between;"><h3>${c}</h3><button class="btn-add" onclick="add('${c}')">+</button></div>`;
+                    div.innerHTML = `<div class="header-rayon"><div class="rayon-titre">${cat}</div><button class="btn-plus" onclick="add('${cat}')">+</button></div>`;
                     items.forEach(i => {
-                        div.innerHTML += `<div class="item">
-                            <span><input type="checkbox" onchange="toggle(${i.id})"> ${i.nom} ${i.qty > 1 ? 'x'+i.qty : ''}</span>
-                            <span><button class="btn-qty" onclick="changeQty(${i.id}, -1)">-</button><button class="btn-qty" onclick="changeQty(${i.id}, 1)">+</button></span>
-                        </div>`;
+                        div.innerHTML += `
+                            <div class="produit">
+                                <label><input type="checkbox" onchange="toggle('${i.id}')"> ${i.nom} ${i.qte > 1 ? '(x' + i.qte + ')' : ''}</label>
+                                <div class="qte-control">
+                                    <button class="qte-btn" onclick="changeQte('${i.id}', -1)">-</button>
+                                    <button class="qte-btn" onclick="changeQte('${i.id}', 1)">+</button>
+                                </div>
+                            </div>`;
                     });
                     app.appendChild(div);
                 }
             });
-            const done = data.filter(i => i.done);
-            if (done.length > 0) {
-                const div = document.createElement('div');
-                div.innerHTML = "<h3>✅ Déjà pris</h3>";
-                cats.forEach(c => {
-                    const items = done.filter(i => i.cat === c);
-                    if (items.length > 0) {
-                        div.innerHTML += `<div class="done-rayon"><h4>${c}</h4>` + 
-                        items.map(i => `<div class="item" style="text-decoration:line-through;"><label><input type="checkbox" checked onchange="toggle(${i.id})"> ${i.nom}</label></div>`).join('') +
-                        `</div>`;
-                    }
-                });
-                app.appendChild(div);
-            }
+
+            const divCoches = document.createElement('div');
+            divCoches.innerHTML = "<h3>✅ Déjà pris</h3>";
+            categories.forEach(cat => {
+                const items = Object.values(data).filter(i => i.cat === cat && i.done);
+                if (items.length > 0) {
+                    divCoches.innerHTML += `<div class="rayon"><div class="rayon-titre" style="color:gray">${cat}</div>`;
+                    items.forEach(i => {
+                        divCoches.innerHTML += `<div class="produit"><label><input type="checkbox" checked onchange="toggle('${i.id}')"> <span class="checked-text">${i.nom}</span></label></div>`;
+                    });
+                    divCoches.innerHTML += `</div>`;
+                }
+            });
+            app.appendChild(divCoches);
         }
 
-        function toggle(id) { data.find(i => i.id === id).done = !data.find(i => i.id === id).done; save(); }
-        function changeQty(id, delta) { const item = data.find(i => i.id === id); item.qty = Math.max(1, (item.qty || 1) + delta); save(); }
-        function add(cat) { const n = prompt("Article :"); if(n) { data.push({id: Date.now(), nom: n, cat: cat, done: false, qty: 1}); save(); } }
-        function
+        function toggle(id) { data[id].done = !data[id].done; save(); }
+        function changeQte(id, delta) { data[id].qte = Math.max(1, (data[id].qte || 1) + delta); save(); }
+        function add(cat) { const n = prompt("Article :"); if(n) { const id = Date.now(); data[id] = {id, nom:n, cat, done:false, qte:1}; save(); } }
+        function save() { localStorage.setItem('liste', JSON.stringify(data)); render(); }
+        render();
+    </script>
+</body>
+</html>
