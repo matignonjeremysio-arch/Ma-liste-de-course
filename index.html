@@ -22,7 +22,6 @@
         input[type="checkbox"]:checked { background-color: #2ecc71; border-color: #2ecc71; }
         .quantite-control { display: flex; align-items: center; gap: 8px; }
         .quantite-btn { background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        #liste-coches { margin-top: 25px; padding-top: 15px; border-top: 2px dashed var(--checked-color); }
         .btn-reset { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #e74c3c; color: white; border: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; cursor: pointer; z-index: 100; }
     </style>
 </head>
@@ -35,9 +34,7 @@
     </div>
 
     <div id="liste-a-prendre"></div>
-    <div id="liste-coches">
-        <div class="rayon-titre">✅ Articles déjà pris</div>
-    </div>
+    <div id="liste-coches"></div>
 
     <button class="btn-reset" onclick="toutEffacer()">🔄 Tout Décocher</button>
 
@@ -47,18 +44,13 @@
             "🥩 Frais & Viande": ["Jambon", "Fromage", "Yaourt", "Knacki", "Saucisson", "Saumon", "Poisson", "Oeufs", "Chorizo"],
             "🥐 Épicerie": ["Petit déj (Céréales)", "Chips", "Lentilles", "Sucre", "Sel", "Huile", "Pain"],
             "🍾 Boissons": ["Limonade", "Jus de fruit", "Eau"],
-            "🧼 Hygiène & Maison": ["Dentifrice", "Déodorant", "Pastilles lave-vaisselle", "PQ", "Shampoing", "Gel douche", "Lessive"]
+            "🧼 Hygiène & Maison": ["Dentifrice", "Déodorant", "Pastilles lave-vaisselle", "PQ", "Shampoing", "Gel douche", "Lessive"],
+            "✨ Divers": []
         };
 
         let listeData = JSON.parse(localStorage.getItem('liste_courses_data')) || {};
 
-        // Nettoyage : suppression d'éventuels doublons manuels du Chorizo s'ils existaient
-        Object.keys(listeData).forEach(id => {
-            if (listeData[id].nom === "Chorizo" && !listeData[id].permanent) {
-                delete listeData[id];
-            }
-        });
-
+        // Initialisation des produits permanents
         Object.keys(produitsParRayon).forEach(rayon => {
             produitsParRayon[rayon].forEach((nom, index) => {
                 const id = rayon + index;
@@ -68,39 +60,47 @@
 
         function render() {
             document.getElementById('liste-a-prendre').innerHTML = "";
-            const conteneurCoches = document.getElementById('liste-coches');
-            conteneurCoches.innerHTML = '<div class="rayon-titre">✅ Articles déjà pris</div>';
+            document.getElementById('liste-coches').innerHTML = "";
 
-            Object.values(listeData).forEach(item => {
-                const divItem = document.createElement('div');
-                divItem.className = 'produit-item';
-                divItem.innerHTML = `
-                    <label class="checkbox-label">
-                        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggle('${item.id}')">
-                        <span>${item.nom} ${item.qte > 1 ? '(x' + item.qte + ')' : ''}</span>
-                    </label>
-                    ${!item.checked ? `
-                    <div class="quantite-control">
-                        <button class="quantite-btn" onclick="modifierQte('${item.id}', -1)">-</button>
-                        <span>${item.qte}</span>
-                        <button class="quantite-btn" onclick="modifierQte('${item.id}', 1)">+</button>
-                    </div>` : ''}
-                `;
+            Object.keys(produitsParRayon).forEach(rayon => {
+                const itemsDansRayon = Object.values(listeData).filter(item => item.rayon === rayon);
+                
+                // 1. Zone à prendre
+                const aPrendre = itemsDansRayon.filter(i => !i.checked);
+                if (aPrendre.length > 0) {
+                    const zone = creerZone(rayon, aPrendre, false);
+                    document.getElementById('liste-a-prendre').appendChild(zone);
+                }
 
-                if (item.checked) conteneurCoches.appendChild(divItem);
-                else {
-                    const idRayon = 'rayon-' + item.rayon.replace(/\s/g, '');
-                    let zoneRayon = document.getElementById(idRayon);
-                    if (!zoneRayon) {
-                        zoneRayon = document.createElement('div');
-                        zoneRayon.id = idRayon;
-                        zoneRayon.className = 'rayon';
-                        zoneRayon.innerHTML = `<div class="rayon-titre">${item.rayon}</div>`;
-                        document.getElementById('liste-a-prendre').appendChild(zoneRayon);
-                    }
-                    zoneRayon.appendChild(divItem);
+                // 2. Zone déjà pris
+                const dejaPris = itemsDansRayon.filter(i => i.checked);
+                if (dejaPris.length > 0) {
+                    const zone = creerZone(rayon, dejaPris, true);
+                    document.getElementById('liste-coches').appendChild(zone);
                 }
             });
+        }
+
+        function creerZone(titre, items, isChecked) {
+            const div = document.createElement('div');
+            div.className = 'rayon';
+            div.innerHTML = `<div class="rayon-titre">${isChecked ? '✅ ' : ''}${titre}</div>`;
+            items.forEach(item => {
+                div.innerHTML += `
+                    <div class="produit-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggle('${item.id}')">
+                            <span>${item.nom} ${item.qte > 1 ? '(x' + item.qte + ')' : ''}</span>
+                        </label>
+                        ${!item.checked ? `
+                        <div class="quantite-control">
+                            <button class="quantite-btn" onclick="modifierQte('${item.id}', -1)">-</button>
+                            <span>${item.qte}</span>
+                            <button class="quantite-btn" onclick="modifierQte('${item.id}', 1)">+</button>
+                        </div>` : ''}
+                    </div>`;
+            });
+            return div;
         }
 
         function toggle(id) { listeData[id].checked = !listeData[id].checked; sauvegarder(); }
@@ -114,9 +114,7 @@
             sauvegarder();
         }
         function sauvegarder() { localStorage.setItem('liste_courses_data', JSON.stringify(listeData)); render(); }
-        function toutEffacer() { 
-            if(confirm("Réinitialiser ?")) { localStorage.clear(); location.reload(); }
-        }
+        function toutEffacer() { if(confirm("Réinitialiser ?")) { localStorage.clear(); location.reload(); } }
         render();
     </script>
 </body>
